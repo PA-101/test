@@ -1,44 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "@/layouts/MainLayout";
 
 const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [phone, setPhone] = useState("");
-  const [activity, setActivity] = useState<string[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSimulate = () => {
-    if (!phone) {
-      alert("Enter a phone number");
-      return;
-    }
+  const API = "https://leadrevive-backend-m3z6.onrender.com";
 
-    const newEvents = [
-      `📞 Missed call from ${phone}`,
-      `💬 SMS sent to ${phone}`,
-      `✅ Customer replied and booked`,
-    ];
+  /**
+   * CREATE REAL LEAD (BACKEND CALL)
+   */
+  const handleSimulate = async () => {
+    if (!phone) return alert("Enter phone number");
 
-    setActivity((prev) => [...newEvents, ...prev]);
+    setLoading(true);
+
+    const res = await fetch(`${API}/api/lead`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone,
+        userId: user.id || "demo-user",
+      }),
+    });
+
+    const data = await res.json();
+
+    setLeads((prev) => [data, ...prev]);
     setPhone("");
+    setLoading(false);
   };
+
+  /**
+   * LOAD EXISTING LEADS
+   */
+  const loadLeads = async () => {
+    const res = await fetch(`${API}/api/leads/${user.id || "demo-user"}`);
+    const data = await res.json();
+    setLeads(data);
+  };
+
+  useEffect(() => {
+    loadLeads();
+  }, []);
 
   return (
     <MainLayout>
       <div className="px-6 py-20 max-w-6xl mx-auto">
 
-        <h1 style={{ color: "red" }}>
-          DASHBOARD TEST ACTIVE
-          </h1>
+        <h1 className="text-3xl font-bold mb-2">
+          Lead Recovery Dashboard
+        </h1>
 
         <p className="text-gray-400 mb-8">
-          Current Plan: {user.plan || "Free"}
+          Real-time lead recovery system
         </p>
 
-        {/* SIMULATION BOX */}
+        {/* INPUT */}
         <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-10">
           <h2 className="font-semibold mb-4">
-            Missed Call Simulation
+            Create Lead Event
           </h2>
 
           <div className="flex gap-3">
@@ -51,51 +75,32 @@ const Dashboard = () => {
 
             <button
               onClick={handleSimulate}
-              className="bg-white text-black px-5 py-2 rounded-lg font-semibold hover:bg-gray-200"
+              disabled={loading}
+              className="bg-white text-black px-5 py-2 rounded-lg font-semibold"
             >
-              Run
+              {loading ? "Processing..." : "Create Lead"}
             </button>
           </div>
         </div>
 
-        {/* STATS */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
-          {[
-            { label: "Recovered Leads", value: activity.length },
-            { label: "Estimated Revenue", value: `$${activity.length * 50}` },
-            { label: "Active Automations", value: "1" },
-          ].map((stat) => (
+        {/* LEADS FEED */}
+        <div className="space-y-4">
+          {leads.map((lead) => (
             <div
-              key={stat.label}
+              key={lead.id}
               className="bg-white/5 p-6 rounded-xl border border-white/10"
             >
-              <p className="text-gray-400 text-sm">
-                {stat.label}
-              </p>
-              <h2 className="text-2xl font-bold mt-2">
-                {stat.value}
-              </h2>
+              <h3 className="font-bold mb-2">
+                Lead: {lead.phone}
+              </h3>
+
+              <div className="text-sm text-gray-300 space-y-1">
+                {lead.events.map((e: string, i: number) => (
+                  <p key={i}>{e}</p>
+                ))}
+              </div>
             </div>
           ))}
-        </div>
-
-        {/* ACTIVITY FEED */}
-        <div className="bg-white/5 p-6 rounded-xl border border-white/10">
-          <h2 className="font-semibold mb-4">
-            Live Activity
-          </h2>
-
-          {activity.length === 0 ? (
-            <p className="text-gray-500 text-sm">
-              No activity yet. Run a simulation.
-            </p>
-          ) : (
-            <div className="space-y-2 text-sm text-gray-300">
-              {activity.map((item, i) => (
-                <p key={i}>{item}</p>
-              ))}
-            </div>
-          )}
         </div>
 
       </div>

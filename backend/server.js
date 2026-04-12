@@ -1,78 +1,51 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-import Stripe from "stripe";
 
 const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.use(cors());
 app.use(express.json());
 
-/* =========================
-   STRIPE CHECKOUT ROUTE
-========================= */
+// TEMP IN-MEMORY DATABASE (we upgrade later)
+let leads = [];
 
-app.post("/create-checkout-session", async (req, res) => {
-  try {
-    const { plan } = req.body;
+/**
+ * CREATE LEAD EVENT (THIS IS YOUR CORE PRODUCT)
+ */
+app.post("/api/lead", (req, res) => {
+  const { phone, userId } = req.body;
 
-    const prices = {
-      starter: 1900,
-      growth: 3900,
-      pro: 7900,
-    };
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `${plan} Plan`,
-            },
-            unit_amount: prices[plan],
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.BASE_URL}/success`,
-      cancel_url: `${process.env.BASE_URL}/pricing`,
-    });
-
-    res.json({ url: session.url });
-  } catch (err) {
-    console.error("STRIPE ERROR:", err);
-    res.status(500).json({ error: "Stripe failed" });
+  if (!phone) {
+    return res.status(400).json({ error: "Phone required" });
   }
+
+  const event = {
+    id: Date.now(),
+    userId,
+    phone,
+    events: [
+      `📞 Missed call from ${phone}`,
+      `💬 SMS sent to ${phone}`,
+      `✅ Customer replied and booked`,
+    ],
+    createdAt: new Date(),
+  };
+
+  leads.push(event);
+
+  return res.json(event);
 });
 
-/* =========================
-   SERVE FRONTEND
-========================= */
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// point to root dist folder
-const distPath = path.join(__dirname, "../dist");
-
-app.use(express.static(distPath));
-
-// handle React routing
-app.get("*", (req, res) => {
-  res.sendFile(path.join(distPath, "index.html"));
+/**
+ * GET USER LEADS (DASHBOARD FEED)
+ */
+app.get("/api/leads/:userId", (req, res) => {
+  const userLeads = leads.filter(l => l.userId === req.params.userId);
+  res.json(userLeads);
 });
-
-/* =========================
-   START SERVER
-========================= */
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("LeadRevive Engine running on port", PORT);
 });
