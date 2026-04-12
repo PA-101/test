@@ -9,6 +9,10 @@ const plans = [
 
 const Pricing = () => {
   const handleCheckout = async (plan: string) => {
+    localStorage.setItem("user", JSON.stringify({
+    id: "test123",
+    plan: plan
+  }));
     const res = await fetch(
       "https://leadrevive-backend-m3z6.onrender.com/create-checkout-session",
       {

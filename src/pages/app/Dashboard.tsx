@@ -1,11 +1,19 @@
 import MainLayout from "@/layouts/MainLayout";
 
 const Dashboard = () => {
+  // 🔥 GET USER FROM LOCAL STORAGE
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
   return (
     <MainLayout>
       <div className="px-6 py-20 max-w-6xl mx-auto">
 
-        <h1 className="text-3xl font-bold mb-10">Dashboard</h1>
+        {/* HEADER */}
+        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+
+        <p className="text-gray-400 mb-8">
+          Current Plan: {user.plan || "None"}
+        </p>
 
         {/* STATS */}
         <div className="grid md:grid-cols-3 gap-6 mb-10">

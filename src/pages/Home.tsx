@@ -35,11 +35,6 @@ const Home = () => {
           </Link>
         </div>
 
-        {/* TRUST STRIP */}
-        <p className="mt-6 text-xs text-gray-500">
-          Trusted by local businesses to recover lost revenue
-        </p>
-
         {/* PROBLEM */}
         <div className="mt-28 grid md:grid-cols-3 gap-6 text-left">
           {[

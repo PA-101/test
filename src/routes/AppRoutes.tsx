@@ -1,3 +1,4 @@
+import Success from "@/pages/Success";
 import { Routes, Route } from "react-router-dom";
 import Home from "@/pages/Home";
 import Pricing from "@/pages/Pricing";
@@ -29,6 +30,12 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/signup" element={<Signup />} />
     <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/success" element={<Success />} />
+    <Route path="/app/dashboard" element={<ProtectedRoute>
+    <Dashboard />
+    </ProtectedRoute>
+  }
+/>
 
     {/* Protected */}
     <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
@@ -37,7 +44,6 @@ const AppRoutes = () => (
     <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
     <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
