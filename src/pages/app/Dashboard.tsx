@@ -27,9 +27,9 @@ const Dashboard = () => {
     <MainLayout>
       <div className="px-6 py-20 max-w-6xl mx-auto">
 
-        <h1 className="text-3xl font-bold mb-2">
-          Dashboard
-        </h1>
+        <h1 style={{ color: "red" }}>
+          DASHBOARD TEST ACTIVE
+          </h1>
 
         <p className="text-gray-400 mb-8">
           Current Plan: {user.plan || "Free"}
