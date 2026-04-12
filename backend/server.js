@@ -1,133 +1,112 @@
-
+import express from "express";
 import cors from "cors";
+import Stripe from "stripe";
 import dotenv from "dotenv";
 
+dotenv.config();
 
-dotenv.config(); // Loads .env file into process.env
-
-// Initialize Express app
 const app = express();
+const PORT = process.env.PORT || 5050;
 
-import express from "express";
-import Stripe from "stripe";
+/**
+ * Middleware
+ * - cors: allows frontend to call backend
+ * - express.json: reads JSON body from requests
+ */
+app.use(cors({ origin: "*" }));
+app.use(express.json());
 
-// Initialize Stripe with SECRET key (NEVER expose this in frontend)
+/**
+ * Stripe initialization
+ * MUST have STRIPE_SECRET_KEY in Render env vars
+ */
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ---------------------------------------------
-// MIDDLEWARE
-// ---------------------------------------------
+/**
+ * Health check route
+ */
+app.get("/", (req, res) => {
+  res.send("Backend is running");
+});
 
-app.use(cors()); 
-// Allows frontend (React) to talk to backend
+/**
+ * PLAN CONFIGURATION (SAFE + CLEAN)
+ * Centralized pricing logic
+ */
+const priceMap = {
+  starter: {
+    name: "Starter Plan",
+    amount: 1900,
+  },
+  growth: {
+    name: "Growth Plan",
+    amount: 3900,
+  },
+  pro: {
+    name: "Pro Plan",
+    amount: 7900,
+  },
+};
 
-app.use(express.json());
-// Allows backend to read JSON body from requests
-
-// ⚠️ IMPORTANT: Stripe webhook MUST use raw body
-app.use("/webhook", express.raw({ type: "application/json" }));
-
-// ---------------------------------------------
-// STRIPE CHECKOUT SESSION ROUTE
-// ---------------------------------------------
-
+/**
+ * STRIPE CHECKOUT ROUTE
+ */
 app.post("/create-checkout-session", async (req, res) => {
-  const { plan, userId } = req.body;
-
-  // Pricing in cents (Stripe requirement)
-  const prices = {
-    starter: 1900,
-    growth: 3900,
-    pro: 7900
-  };
-
   try {
+    console.log("🔥 Checkout request received");
+
+    const { plan, userId } = req.body;
+
+    console.log("Plan received:", plan);
+    console.log("UserId:", userId);
+    console.log("Stripe key exists:", !!process.env.STRIPE_SECRET_KEY);
+
+    const selectedPlan = priceMap[plan];
+
+    // Validate plan
+    if (!selectedPlan) {
+      return res.status(400).json({
+        error: "Invalid plan selected",
+      });
+    }
+
+    // Create Stripe session
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-
       payment_method_types: ["card"],
-
+      mode: "payment",
       line_items: [
         {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `LeadRevive AI - ${plan}`
+              name: selectedPlan.name,
             },
-            unit_amount: prices[plan],
-            recurring: {
-              interval: "month"
-            }
+            unit_amount: selectedPlan.amount,
           },
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
-
-      metadata: {
-        userId: userId // IMPORTANT: ties payment to user in your system
-      },
-
-      success_url: `${process.env.CLIENT_URL}/dashboard?success=true`,
-      cancel_url: `${process.env.CLIENT_URL}/pricing?canceled=true`
+      success_url: `${process.env.CLIENT_URL}/success`,
+      cancel_url: `${process.env.CLIENT_URL}/pricing`,
     });
 
-    // Send Stripe checkout URL to frontend
-    res.json({ url: session.url });
+    console.log("✅ Stripe session created:", session.id);
 
-  } catch (err) {
-    console.error("Stripe error:", err);
-    res.status(500).json({ error: "Checkout session failed" });
+    return res.json({
+      url: session.url,
+    });
+  } catch (error) {
+    console.error("❌ Stripe error:", error);
+
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 });
 
-// ---------------------------------------------
-// WEBHOOK ROUTE (CRITICAL FOR MONEY)
-// ---------------------------------------------
-
-app.post("/webhook", async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-
-  try {
-    // Verify Stripe sent this event (security check)
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error("Webhook error:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // -----------------------------------------
-  // PAYMENT SUCCESS EVENT
-  // -----------------------------------------
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    const userId = session.metadata.userId;
-
-    console.log("💰 Payment successful for user:", userId);
-
-    // ⚠️ THIS IS WHERE YOU WILL CONNECT DATABASE LATER
-    // Example:
-    // - mark user as "active"
-    // - unlock dashboard access
-    // - store subscription ID
-  }
-
-  res.json({ received: true });
-});
-
-// ---------------------------------------------
-// START SERVER
-// ---------------------------------------------
-
-const PORT = process.env.PORT || 5050;
-
+/**
+ * Start server
+ */
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
-  console.log("STRIPE KEY:", process.env.STRIPE_SECRET_KEY);
 });

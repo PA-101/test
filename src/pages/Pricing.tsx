@@ -1,7 +1,7 @@
+import { createCheckoutSession } from "@/services/billingService";
 import MainLayout from "@/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-import { toast } from "sonner";
 
 const plans = [
   {
@@ -31,8 +31,30 @@ const plans = [
 ];
 
 const Pricing = () => {
-  const handleCheckout = (plan: string) => {
-    toast.info(`Redirecting to checkout for ${plan} plan...`);
+  const handleCheckout = async (planId: string) => {
+    console.log("CLICKED:", planId);
+
+    const res = await fetch(
+      "https://leadrevive-backend-m3z6.onrender.com/create-checkout-session",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: planId, // ✅ FIXED HERE
+          userId: "test123",
+        }),
+      }
+    );
+
+    const data = await res.json();
+    console.log("RESPONSE:", data);
+
+    if (!data.url) {
+      alert("NO URL RETURNED");
+      return;
+    }
+
+    window.location.href = data.url;
   };
 
   return (
@@ -52,24 +74,17 @@ const Pricing = () => {
             <div
               key={plan.id}
               className={`rounded-xl p-8 space-y-6 transition-all ${
-                plan.highlighted
-                  ? "glass glow-border scale-105"
-                  : "glass"
+                plan.highlighted ? "glass glow-border scale-105" : "glass"
               }`}
             >
-              {plan.highlighted && (
-                <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  Most Popular
-                </span>
-              )}
-              <div>
-                <h3 className="text-xl font-heading font-bold">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground">{plan.desc}</p>
-              </div>
+              <h3 className="text-xl font-heading font-bold">{plan.name}</h3>
+              <p className="text-sm text-muted-foreground">{plan.desc}</p>
+
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-heading font-bold">{plan.price}</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
+
               <ul className="space-y-3">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm">
@@ -78,8 +93,9 @@ const Pricing = () => {
                   </li>
                 ))}
               </ul>
+
               <Button
-                onClick={() => handleCheckout(plan.name)}
+                onClick={() => handleCheckout(plan.id)} // ✅ FIXED HERE
                 className={`w-full ${
                   plan.highlighted
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
