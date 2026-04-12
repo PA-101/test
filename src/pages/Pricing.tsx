@@ -19,53 +19,48 @@ const Pricing = () => {
     );
 
     const data = await res.json();
-
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert("Checkout failed");
-    }
+    if (data.url) window.location.href = data.url;
+    else alert("Checkout failed");
   };
 
   return (
     <MainLayout>
-      <div className="px-6 py-24 max-w-5xl mx-auto text-center">
+      <div className="px-6 py-28 max-w-6xl mx-auto text-center">
 
-        <h1 className="text-4xl font-bold mb-4">
-          Simple, transparent pricing
+        <h1 className="text-5xl font-bold mb-6">
+          Pricing that pays for itself
         </h1>
 
         <p className="text-gray-400 mb-16">
-          Start free. Upgrade when you're ready.
+          Recover just 1 missed customer and you’ve already made your money back.
         </p>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-8">
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`p-8 rounded-xl border ${
+              className={`p-8 rounded-2xl border transition ${
                 plan.popular
-                  ? "border-white bg-white/10 scale-105"
-                  : "border-white/10 bg-white/5"
+                  ? "border-white bg-white/10 scale-105 shadow-xl"
+                  : "border-white/10 bg-white/5 hover:bg-white/10"
               }`}
             >
               {plan.popular && (
-                <p className="text-sm mb-2 text-green-400">Most Popular</p>
+                <p className="text-green-400 text-sm mb-2">Most Popular</p>
               )}
 
               <h2 className="text-xl font-semibold">{plan.name}</h2>
-              <p className="text-4xl font-bold mt-4">{plan.price}</p>
+              <p className="text-5xl font-bold mt-4">{plan.price}</p>
 
               <Button
                 onClick={() => handleCheckout(plan.id)}
-                className="w-full mt-6"
+                className="w-full mt-8"
               >
                 Get Started
               </Button>
             </div>
           ))}
         </div>
-
       </div>
     </MainLayout>
   );
