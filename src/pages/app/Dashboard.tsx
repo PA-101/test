@@ -1,3 +1,4 @@
+console.log("DASHBOARD LOADED NEW VERSION");
 import { useState } from "react";
 import MainLayout from "@/layouts/MainLayout";
 
