@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/layouts/MainLayout";
 
@@ -9,7 +8,10 @@ const Dashboard = () => {
   const [activity, setActivity] = useState<string[]>([]);
 
   const handleSimulate = () => {
-    if (!phone) return alert("Enter a phone number");
+    if (!phone) {
+      alert("Enter a phone number");
+      return;
+    }
 
     const newEvents = [
       `📞 Missed call from ${phone}`,
@@ -25,17 +27,18 @@ const Dashboard = () => {
     <MainLayout>
       <div className="px-6 py-20 max-w-6xl mx-auto">
 
-        {/* HEADER */}
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          Dashboard
+        </h1>
 
         <p className="text-gray-400 mb-8">
-          Current Plan: {user.plan || "None"}
+          Current Plan: {user.plan || "Free"}
         </p>
 
-        {/* ACTION PANEL */}
+        {/* SIMULATION BOX */}
         <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-10">
           <h2 className="font-semibold mb-4">
-            Simulate Missed Call
+            Missed Call Simulation
           </h2>
 
           <div className="flex gap-3">
@@ -66,7 +69,9 @@ const Dashboard = () => {
               key={stat.label}
               className="bg-white/5 p-6 rounded-xl border border-white/10"
             >
-              <p className="text-gray-400 text-sm">{stat.label}</p>
+              <p className="text-gray-400 text-sm">
+                {stat.label}
+              </p>
               <h2 className="text-2xl font-bold mt-2">
                 {stat.value}
               </h2>
@@ -76,7 +81,9 @@ const Dashboard = () => {
 
         {/* ACTIVITY FEED */}
         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
-          <h2 className="font-semibold mb-4">Live Activity</h2>
+          <h2 className="font-semibold mb-4">
+            Live Activity
+          </h2>
 
           {activity.length === 0 ? (
             <p className="text-gray-500 text-sm">
