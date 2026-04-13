@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "@/layouts/MainLayout";
+import { triggerToast } from "@/components/Toast";
 
-const API = "https://leadrevive-backend-m3z6.onrender.com";
+type Channel = "email" | "phone";
 
-type Lead = {
-  id: string;
-  phone: string;
-  events: string[] | string;
+type Message = {
+  from: "ai" | "system";
+  text: string;
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const user = (() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "{}");
@@ -18,147 +21,171 @@ const Dashboard = () => {
     }
   })();
 
-  const [phone, setPhone] = useState("");
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const isLoggedIn = !!user?.id;
 
-  const createLead = async () => {
-    if (!phone) return alert("Enter phone number");
+  const [channel, setChannel] = useState<Channel>("phone");
+  const [destination, setDestination] = useState("");
+  const [chat, setChat] = useState<Message[]>([]);
+  const [running, setRunning] = useState(false);
 
-    try {
-      setLoading(true);
+  const sleep = (ms: number) =>
+    new Promise((r) => setTimeout(r, ms));
 
-      const res = await fetch(`${API}/api/leads`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone,
-          userId: user.id || "demo-user",
-        }),
-      });
+  const push = (m: Message) =>
+    setChat((prev) => [...prev, m]);
 
-      const data = await res.json();
-
-      setLeads((prev) => [data, ...prev]);
-      setPhone("");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to create lead");
-    } finally {
-      setLoading(false);
+  const runAgent = async () => {
+    // 🔒 HARD BLOCK
+    if (!isLoggedIn) {
+      triggerToast("Please log in to use AI Agent");
+      navigate("/login");
+      return;
     }
+
+    if (!destination) return alert("Enter destination");
+
+    setRunning(true);
+    setChat([]);
+
+    push({
+      from: "system",
+      text: `AI Agent initialized (${channel.toUpperCase()})`,
+    });
+
+    await sleep(1000);
+
+    push({
+      from: "ai",
+      text:
+        channel === "email"
+          ? `Sending personalized email to ${destination}...`
+          : `Sending SMS to ${destination}...`,
+    });
+
+    await sleep(1500);
+
+    push({
+      from: "system",
+      text: "Message delivered ✔",
+    });
+
+    await sleep(1200);
+
+    push({
+      from: "ai",
+      text:
+        channel === "email"
+          ? `Subject: Unlock AI automation access\n\nWe reached out earlier — your AI workflow is ready.`
+          : `Hey! Your AI automation setup is ready. Reply YES to continue.`,
+    });
+
+    await sleep(1500);
+
+    push({
+      from: "system",
+      text: "Waiting for response...",
+    });
+
+    await sleep(1500);
+
+    push({
+      from: "ai",
+      text:
+        "No response detected — upgrade required to continue automation.",
+    });
+
+    setRunning(false);
   };
-
-  const loadLeads = async () => {
-    try {
-      const res = await fetch(
-        `${API}/api/leads/${user.id || "demo-user"}`
-      );
-
-      const data = await res.json();
-
-      setLeads(Array.isArray(data) ? data : data.leads || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load leads");
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadLeads();
-  }, []);
 
   return (
     <MainLayout>
-      <div className="px-6 py-20 max-w-6xl mx-auto">
+      <div className="px-6 py-16 max-w-6xl mx-auto">
 
-        <h1 className="text-3xl font-bold mb-2">
-          Lead Recovery Dashboard
-        </h1>
+        {/* LOCKED STATE UI */}
+        {!isLoggedIn ? (
+          <div className="bg-red-500/10 border border-red-500/30 p-10 rounded-xl text-center">
+            <h1 className="text-2xl font-bold text-red-400">
+              Login Required
+            </h1>
 
-        <p className="text-gray-400 mb-8">
-          Recover lost customers automatically
-        </p>
-
-        <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-10 backdrop-blur">
-          <h2 className="font-semibold mb-4">
-            Trigger Recovery Flow
-          </h2>
-
-          <div className="flex gap-3">
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter phone number"
-              className="flex-1 px-4 py-2 rounded-lg bg-black border border-white/10 text-white outline-none"
-            />
+            <p className="text-gray-400 mt-2">
+              You must log in to access the AI Agent demo
+            </p>
 
             <button
-              onClick={createLead}
-              disabled={loading}
-              className="bg-white text-black px-5 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+              onClick={() => navigate("/login")}
+              className="mt-6 bg-white text-black px-6 py-3 rounded-lg font-bold"
             >
-              {loading ? "Processing..." : "Recover Lead"}
+              Go to Login
             </button>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* HERO */}
+            <div className="mb-10">
+              <h1 className="text-4xl font-bold">
+                AI Outreach Agent
+              </h1>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white/5 p-6 rounded-xl border border-white/10">
-            <p className="text-gray-400 text-sm">Total Leads</p>
-            <h2 className="text-2xl font-bold">{leads.length}</h2>
-          </div>
+              <p className="text-gray-400 mt-2">
+                Run automated outreach simulations
+              </p>
+            </div>
 
-          <div className="bg-white/5 p-6 rounded-xl border border-white/10">
-            <p className="text-gray-400 text-sm">Recovered Revenue</p>
-            <h2 className="text-2xl font-bold">
-              ${leads.length * 75}
-            </h2>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-xl border border-white/10">
-            <p className="text-gray-400 text-sm">Automation Rate</p>
-            <h2 className="text-2xl font-bold">78%</h2>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {initialLoading ? (
-            <p className="text-gray-500">Loading...</p>
-          ) : leads.length === 0 ? (
-            <p className="text-gray-500">
-              No leads yet. Start by triggering a recovery.
-            </p>
-          ) : (
-            leads.map((lead) => {
-              const events =
-                typeof lead.events === "string"
-                  ? JSON.parse(lead.events)
-                  : lead.events;
-
-              return (
-                <div
-                  key={lead.id}
-                  className="bg-white/5 p-6 rounded-xl border border-white/10"
+            {/* CONTROLS */}
+            <div className="bg-white/5 border border-white/10 p-6 rounded-xl mb-10">
+              <div className="flex gap-4 mb-4">
+                <select
+                  value={channel}
+                  onChange={(e) =>
+                    setChannel(e.target.value as Channel)
+                  }
+                  className="bg-black border border-white/10 px-4 py-3 rounded-lg"
                 >
-                  <h3 className="font-bold mb-2">
-                    📞 {lead.phone}
-                  </h3>
+                  <option value="phone">SMS</option>
+                  <option value="email">Email</option>
+                </select>
 
-                  <div className="text-sm text-gray-300 space-y-1">
-                    {events.map((e: string, i: number) => (
-                      <p key={i}>{e}</p>
-                    ))}
-                  </div>
+                <input
+                  value={destination}
+                  onChange={(e) =>
+                    setDestination(e.target.value)
+                  }
+                  placeholder={
+                    channel === "email"
+                      ? "Enter email address"
+                      : "Enter phone number"
+                  }
+                  className="flex-1 px-4 py-3 rounded-lg bg-black border border-white/10"
+                />
+
+                <button
+                  onClick={runAgent}
+                  disabled={running}
+                  className="bg-green-500 text-black px-6 py-3 rounded-lg font-bold"
+                >
+                  Launch AI Agent
+                </button>
+              </div>
+            </div>
+
+            {/* OUTPUT */}
+            <div className="space-y-3">
+              {chat.map((m, i) => (
+                <div
+                  key={i}
+                  className={
+                    m.from === "ai"
+                      ? "text-green-400"
+                      : "text-gray-400"
+                  }
+                >
+                  {m.text}
                 </div>
-              );
-            })
-          )}
-        </div>
-
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </MainLayout>
   );

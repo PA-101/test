@@ -1,78 +1,80 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Zap, Menu, X } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Zap } from "lucide-react";
 
 const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem("user");
     navigate("/");
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
+  const linkStyle = (path: string) =>
+    `text-sm transition ${
+      isActive(path)
+        ? "text-white font-semibold"
+        : "text-gray-400 hover:text-white"
+    }`;
+
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-border/50">
+    <nav className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2 font-heading text-xl font-bold">
-          <Zap className="h-6 w-6 text-primary" />
-          <span className="gradient-text">LeadRevive</span>
-          <span className="text-muted-foreground font-normal text-sm">AI</span>
+
+        {/* LOGO */}
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+          <Zap className="h-6 w-6 text-green-400" />
+          LeadRevive
         </Link>
 
-        {/* Desktop */}
-        <div className="hidden md:flex items-center gap-6">
-          {!isAuthenticated ? (
+        {/* LINKS */}
+        <div className="flex items-center gap-8">
+
+          <Link to="/" className={linkStyle("/")}>
+            Home
+          </Link>
+
+          <Link to="/pricing" className={linkStyle("/pricing")}>
+            Pricing
+          </Link>
+
+          <Link to="/dashboard" className={linkStyle("/dashboard")}>
+            Demo
+          </Link>
+
+          {!user ? (
             <>
-              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Home</Link>
-              <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
-              <Link to="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</Link>
-              <Link to="/login">
-                <Button variant="ghost" size="sm">Log In</Button>
+              <Link to="/login" className="text-gray-400 hover:text-white text-sm">
+                Login
               </Link>
-              <Link to="/signup">
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">Start Free Trial</Button>
+
+              <Link
+                to="/signup"
+                className="bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold"
+              >
+                Start Free
               </Link>
             </>
           ) : (
-            <>
-              <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
-              <Link to="/settings" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Settings</Link>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>Logout</Button>
-            </>
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-white text-sm"
+            >
+              Logout
+            </button>
           )}
         </div>
-
-        {/* Mobile toggle */}
-        <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
       </div>
-
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="md:hidden glass border-t border-border/50 px-4 pb-4 pt-2 space-y-2">
-          {!isAuthenticated ? (
-            <>
-              <Link to="/" className="block py-2 text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>Home</Link>
-              <Link to="/pricing" className="block py-2 text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>Pricing</Link>
-              <Link to="/login" className="block py-2 text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>Log In</Link>
-              <Link to="/signup" onClick={() => setMobileOpen(false)}>
-                <Button size="sm" className="w-full bg-primary text-primary-foreground">Start Free Trial</Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/dashboard" className="block py-2 text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>Dashboard</Link>
-              <Link to="/settings" className="block py-2 text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>Settings</Link>
-              <button className="block py-2 text-sm text-muted-foreground" onClick={() => { handleLogout(); setMobileOpen(false); }}>Logout</button>
-            </>
-          )}
-        </div>
-      )}
     </nav>
   );
 };
