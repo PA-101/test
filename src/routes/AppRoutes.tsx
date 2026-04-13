@@ -10,15 +10,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Home />} />
     <Route path="/pricing" element={<Pricing />} />
-
-    <Route
-      path="/dashboard"
-      element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="/dashboard" element={<Dashboard />}/>
   </Routes>
 );
 
