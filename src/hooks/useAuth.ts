@@ -1,11 +1,14 @@
-import { useContext } from "react";
-import { AuthContext } from "@/context/AuthContext";
-
 export const useAuth = () => {
-  const token = localStorage.getItem("token");
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
 
   return {
-    isAuthenticated: !!token,
+    isAuthenticated: !!user?.id, // 🔥 FIXED
     logout: () => {
       localStorage.removeItem("token");
       localStorage.removeItem("user");

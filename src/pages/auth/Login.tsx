@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const API = "http://localhost:10000";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  const demo = params.get("demo");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,10 +28,17 @@ const Login = () => {
       return;
     }
 
-    localStorage.setItem("token", data.token);
+    // 🔥 FORCE SAVE
     localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("token", data.token);
 
-    navigate("/dashboard");
+    console.log("LOGIN SUCCESS:", data.user); // DEBUG
+
+    if (demo === "true") {
+      navigate("/dashboard?demo=true");
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   return (

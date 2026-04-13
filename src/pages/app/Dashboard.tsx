@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import MainLayout from "@/layouts/MainLayout";
 import { triggerToast } from "@/components/Toast";
 
@@ -12,6 +12,7 @@ type Message = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const user = (() => {
     try {
@@ -27,6 +28,9 @@ const Dashboard = () => {
   const [destination, setDestination] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [running, setRunning] = useState(false);
+  const [hasRunDemo, setHasRunDemo] = useState(false);
+
+  const demo = params.get("demo");
 
   const sleep = (ms: number) =>
     new Promise((r) => setTimeout(r, ms));
@@ -35,14 +39,21 @@ const Dashboard = () => {
     setChat((prev) => [...prev, m]);
 
   const runAgent = async () => {
-    // 🔒 HARD BLOCK
+    // 🔒 FORCE LOGIN WITH INTENT
     if (!isLoggedIn) {
       triggerToast("Please log in to use AI Agent");
-      navigate("/login");
+      navigate("/login?demo=true");
       return;
     }
 
-    if (!destination) return alert("Enter destination");
+    if (!destination) {
+      alert(
+        channel === "email"
+          ? "Enter an email address"
+          : "Enter a phone number"
+      );
+      return;
+    }
 
     setRunning(true);
     setChat([]);
@@ -97,11 +108,31 @@ const Dashboard = () => {
     setRunning(false);
   };
 
+  // 🔥 AUTO-RUN DEMO AFTER LOGIN
+  useEffect(() => {
+    if (demo === "true" && isLoggedIn && !hasRunDemo) {
+      setHasRunDemo(true);
+
+      // optional: auto-fill demo destination if empty
+      if (!destination) {
+        setDestination(
+          channel === "email"
+            ? "demo@email.com"
+            : "+1 (555) 123-4567"
+        );
+      }
+
+      setTimeout(() => {
+        runAgent();
+      }, 800);
+    }
+  }, [demo, isLoggedIn]);
+
   return (
     <MainLayout>
       <div className="px-6 py-16 max-w-6xl mx-auto">
 
-        {/* LOCKED STATE UI */}
+        {/* LOCKED STATE */}
         {!isLoggedIn ? (
           <div className="bg-red-500/10 border border-red-500/30 p-10 rounded-xl text-center">
             <h1 className="text-2xl font-bold text-red-400">
@@ -113,10 +144,10 @@ const Dashboard = () => {
             </p>
 
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/login?demo=true")}
               className="mt-6 bg-white text-black px-6 py-3 rounded-lg font-bold"
             >
-              Go to Login
+              Continue to Login
             </button>
           </div>
         ) : (
@@ -129,6 +160,10 @@ const Dashboard = () => {
 
               <p className="text-gray-400 mt-2">
                 Run automated outreach simulations
+              </p>
+
+              <p className="text-green-400 text-sm mt-2 animate-pulse">
+                ● Agent ready
               </p>
             </div>
 
@@ -162,9 +197,9 @@ const Dashboard = () => {
                 <button
                   onClick={runAgent}
                   disabled={running}
-                  className="bg-green-500 text-black px-6 py-3 rounded-lg font-bold"
+                  className="bg-green-500 text-black px-6 py-3 rounded-lg font-bold hover:bg-green-400 transition"
                 >
-                  Launch AI Agent
+                  {running ? "Running..." : "Launch AI Agent"}
                 </button>
               </div>
             </div>
