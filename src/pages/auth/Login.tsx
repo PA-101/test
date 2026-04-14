@@ -7,7 +7,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const demo = params.get("demo");
+  const redirect = params.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,13 +28,11 @@ const Login = () => {
       return;
     }
 
-    // 🔥 FORCE SAVE
     localStorage.setItem("user", JSON.stringify(data.user));
     localStorage.setItem("token", data.token);
 
-    console.log("LOGIN SUCCESS:", data.user); // DEBUG
-
-    if (demo === "true") {
+    // 🔥 SMART REDIRECT
+    if (redirect === "demo") {
       navigate("/dashboard?demo=true");
     } else {
       navigate("/dashboard");
@@ -65,6 +63,10 @@ const Login = () => {
         >
           Login
         </button>
+
+        <p className="text-xs text-gray-500 mt-3">
+          Use password: password123
+        </p>
       </div>
     </div>
   );

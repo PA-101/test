@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "@/layouts/MainLayout";
 import { triggerToast } from "@/components/Toast";
 
@@ -10,10 +10,14 @@ type Message = {
   text: string;
 };
 
+const API = "https://leadrevive-backend-m3z6.onrender.com";
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
 
+  // =====================
+  // USER STATE
+  // =====================
   const user = (() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "{}");
@@ -24,34 +28,45 @@ const Dashboard = () => {
 
   const isLoggedIn = !!user?.id;
 
-  const [channel, setChannel] = useState<Channel>("phone");
+  // =====================
+  // DEMO STATE (LOCAL ONLY)
+  // =====================
+  const [demoUsed, setDemoUsed] = useState(false);
+
+  useEffect(() => {
+    const used = localStorage.getItem("demo_used");
+    if (used === "true") setDemoUsed(true);
+  }, []);
+
+  // =====================
+  // UI STATE
+  // =====================
+  const [channel, setChannel] = useState<Channel>("email");
   const [destination, setDestination] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [running, setRunning] = useState(false);
-  const [hasRunDemo, setHasRunDemo] = useState(false);
 
-  const demo = params.get("demo");
+  const push = (msg: Message) =>
+    setChat((prev) => [...prev, msg]);
 
-  const sleep = (ms: number) =>
-    new Promise((r) => setTimeout(r, ms));
-
-  const push = (m: Message) =>
-    setChat((prev) => [...prev, m]);
-
+  // =====================
+  // MAIN ACTION
+  // =====================
   const runAgent = async () => {
-    // 🔒 FORCE LOGIN WITH INTENT
-    if (!isLoggedIn) {
-      triggerToast("Please log in to use AI Agent");
-      navigate("/login?demo=true");
+    if (!destination) {
+      alert("Enter an email address");
       return;
     }
 
-    if (!destination) {
-      alert(
-        channel === "email"
-          ? "Enter an email address"
-          : "Enter a phone number"
-      );
+    // lock demo after 1 use (unlogged users only)
+    if (demoUsed && !isLoggedIn) {
+      triggerToast("Demo limit reached — please log in");
+      navigate("/login");
+      return;
+    }
+
+    if (channel !== "email") {
+      triggerToast("Currently only email demo is enabled");
       return;
     }
 
@@ -60,116 +75,105 @@ const Dashboard = () => {
 
     push({
       from: "system",
-      text: `AI Agent initialized (${channel.toUpperCase()})`,
+      text: "Connecting AI Agent to email pipeline...",
     });
 
-    await sleep(1000);
+    try {
+      const res = await fetch(`${API}/api/send-demo-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: destination }),
+      });
 
-    push({
-      from: "ai",
-      text:
-        channel === "email"
-          ? `Sending personalized email to ${destination}...`
-          : `Sending SMS to ${destination}...`,
-    });
+      const data = await res.json();
 
-    await sleep(1500);
+      if (!res.ok) throw new Error(data.error || "Failed");
 
-    push({
-      from: "system",
-      text: "Message delivered ✔",
-    });
+      push({
+        from: "ai",
+        text: `Email successfully sent to ${destination}`,
+      });
 
-    await sleep(1200);
+      push({
+        from: "system",
+        text: "Automation sequence complete ✔",
+      });
 
-    push({
-      from: "ai",
-      text:
-        channel === "email"
-          ? `Subject: Unlock AI automation access\n\nWe reached out earlier — your AI workflow is ready.`
-          : `Hey! Your AI automation setup is ready. Reply YES to continue.`,
-    });
+      triggerToast("Message delivered successfully");
 
-    await sleep(1500);
+      // mark demo used
+      if (!isLoggedIn) {
+        localStorage.setItem("demo_used", "true");
+        setDemoUsed(true);
+      }
 
-    push({
-      from: "system",
-      text: "Waiting for response...",
-    });
+      // funnel to pricing
+      setTimeout(() => {
+        triggerToast("Unlock full automation to scale this");
+        navigate("/pricing");
+      }, 2000);
+    } catch (err) {
+      console.error(err);
 
-    await sleep(1500);
-
-    push({
-      from: "ai",
-      text:
-        "No response detected — upgrade required to continue automation.",
-    });
+      push({
+        from: "system",
+        text: "Failed to send email — check backend connection",
+      });
+    }
 
     setRunning(false);
   };
 
-  // 🔥 AUTO-RUN DEMO AFTER LOGIN
-  useEffect(() => {
-    if (demo === "true" && isLoggedIn && !hasRunDemo) {
-      setHasRunDemo(true);
-
-      // optional: auto-fill demo destination if empty
-      if (!destination) {
-        setDestination(
-          channel === "email"
-            ? "demo@email.com"
-            : "+1 (555) 123-4567"
-        );
-      }
-
-      setTimeout(() => {
-        runAgent();
-      }, 800);
-    }
-  }, [demo, isLoggedIn]);
+  // =====================
+  // UI STATES
+  // =====================
+  const lockedOut = demoUsed && !isLoggedIn;
 
   return (
     <MainLayout>
       <div className="px-6 py-16 max-w-6xl mx-auto">
 
-        {/* LOCKED STATE */}
-        {!isLoggedIn ? (
-          <div className="bg-red-500/10 border border-red-500/30 p-10 rounded-xl text-center">
-            <h1 className="text-2xl font-bold text-red-400">
-              Login Required
-            </h1>
+        {/* HEADER */}
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold">
+            AI Outreach Engine
+          </h1>
+
+          <p className="text-gray-400 mt-2">
+            Send automated AI-generated outreach messages instantly
+          </p>
+
+          {!isLoggedIn && (
+            <p className="text-yellow-400 text-sm mt-2">
+              Free demo: 1 execution allowed
+            </p>
+          )}
+        </div>
+
+        {/* LOCK SCREEN */}
+        {lockedOut ? (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 p-10 rounded-xl text-center">
+            <h2 className="text-2xl font-bold text-yellow-400">
+              Demo Completed
+            </h2>
 
             <p className="text-gray-400 mt-2">
-              You must log in to access the AI Agent demo
+              Unlock full AI automation to continue sending outreach.
             </p>
 
             <button
-              onClick={() => navigate("/login?demo=true")}
+              onClick={() => navigate("/pricing")}
               className="mt-6 bg-white text-black px-6 py-3 rounded-lg font-bold"
             >
-              Continue to Login
+              Upgrade Now
             </button>
           </div>
         ) : (
           <>
-            {/* HERO */}
-            <div className="mb-10">
-              <h1 className="text-4xl font-bold">
-                AI Outreach Agent
-              </h1>
-
-              <p className="text-gray-400 mt-2">
-                Run automated outreach simulations
-              </p>
-
-              <p className="text-green-400 text-sm mt-2 animate-pulse">
-                ● Agent ready
-              </p>
-            </div>
-
             {/* CONTROLS */}
             <div className="bg-white/5 border border-white/10 p-6 rounded-xl mb-10">
-              <div className="flex gap-4 mb-4">
+              <div className="flex gap-4 flex-wrap">
+
                 <select
                   value={channel}
                   onChange={(e) =>
@@ -177,20 +181,13 @@ const Dashboard = () => {
                   }
                   className="bg-black border border-white/10 px-4 py-3 rounded-lg"
                 >
-                  <option value="phone">SMS</option>
                   <option value="email">Email</option>
                 </select>
 
                 <input
                   value={destination}
-                  onChange={(e) =>
-                    setDestination(e.target.value)
-                  }
-                  placeholder={
-                    channel === "email"
-                      ? "Enter email address"
-                      : "Enter phone number"
-                  }
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Enter email address"
                   className="flex-1 px-4 py-3 rounded-lg bg-black border border-white/10"
                 />
 
@@ -206,18 +203,24 @@ const Dashboard = () => {
 
             {/* OUTPUT */}
             <div className="space-y-3">
-              {chat.map((m, i) => (
-                <div
-                  key={i}
-                  className={
-                    m.from === "ai"
-                      ? "text-green-400"
-                      : "text-gray-400"
-                  }
-                >
-                  {m.text}
-                </div>
-              ))}
+              {chat.length === 0 ? (
+                <p className="text-gray-500">
+                  No activity yet — run the agent to begin.
+                </p>
+              ) : (
+                chat.map((m, i) => (
+                  <div
+                    key={i}
+                    className={
+                      m.from === "ai"
+                        ? "text-green-400"
+                        : "text-gray-400"
+                    }
+                  >
+                    {m.text}
+                  </div>
+                ))
+              )}
             </div>
           </>
         )}
